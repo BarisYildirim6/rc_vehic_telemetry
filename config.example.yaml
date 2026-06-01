@@ -1,0 +1,35 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+  log_level: "info"
+
+serial:
+  # Linux USB serial examples: /dev/ttyUSB0, /dev/ttyACM0
+  # Raspberry Pi UART example: /dev/serial0
+  port: "/dev/ttyUSB0"
+  baud_rate: 115200
+  connect_timeout_s: 0.2
+  reconnect_interval_s: 2.0
+  mock_when_missing: true
+  queue_size: 200
+
+control:
+  send_rate_hz: 50
+  neutral_on_disconnect: true
+  default_mode: "normal"
+
+video:
+  width: 1280
+  height: 720
+  fps: 30
+  bitrate: 2500000
+  codec: "h264"
+  profile: "baseline"
+  inline_headers: true
+  # UDP target is the viewing machine. Change this to your laptop IP.
+  target_ip: "192.168.4.2"
+  udp_port: 5000
+  tcp_bind: "0.0.0.0"
+  tcp_port: 8888
+  camera_app: "rpicam-vid"
+

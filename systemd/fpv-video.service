@@ -1,0 +1,16 @@
+[Unit]
+Description=FPV RC Car H.264 camera streamer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/fpv-car
+EnvironmentFile=-/opt/fpv-car/video.env
+ExecStart=/bin/bash /opt/fpv-car/scripts/start_video_udp.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

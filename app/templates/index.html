@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FPV RC Car Control</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <h1>FPV RC Car</h1>
+          <p class="muted">Control link at <span id="sendRate">{{ send_rate_hz }}</span> Hz</p>
+        </div>
+        <button id="estopButton" class="estop" type="button">Emergency Stop</button>
+      </section>
+
+      <section class="status-grid">
+        <article class="panel">
+          <span class="label">Server</span>
+          <strong id="wsStatus">Disconnected</strong>
+        </article>
+        <article class="panel">
+          <span class="label">Serial</span>
+          <strong id="serialMode">Unknown</strong>
+        </article>
+        <article class="panel">
+          <span class="label">Throttle</span>
+          <strong id="throttleValue">0.00</strong>
+        </article>
+        <article class="panel">
+          <span class="label">Steering</span>
+          <strong id="steeringValue">0.00</strong>
+        </article>
+      </section>
+
+      <section class="controls">
+        <div class="panel control-panel">
+          <h2>Keyboard</h2>
+          <div class="keys">
+            <kbd>W</kbd><span>Forward</span>
+            <kbd>S</kbd><span>Reverse</span>
+            <kbd>A</kbd><span>Left</span>
+            <kbd>D</kbd><span>Right</span>
+            <kbd>Space</kbd><span>Emergency stop</span>
+          </div>
+        </div>
+        <div class="panel control-panel">
+          <h2>Gamepad</h2>
+          <p id="gamepadStatus" class="muted">No controller detected</p>
+          <div class="bar-row">
+            <span>Throttle</span>
+            <div class="bar"><i id="throttleBar"></i></div>
+          </div>
+          <div class="bar-row">
+            <span>Steering</span>
+            <div class="bar"><i id="steeringBar"></i></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel video-panel">
+        <h2>Video</h2>
+        <p class="muted">
+          H.264 camera streaming runs separately from this control page. Use the scripts in
+          <code>scripts/</code> and view the stream in VLC, ffplay, or GStreamer.
+        </p>
+        <pre id="videoCommand"></pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+
