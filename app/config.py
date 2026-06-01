@@ -28,6 +28,7 @@ class SerialConfig:
 @dataclass(frozen=True)
 class ControlConfig:
     send_rate_hz: int = 50
+    client_timeout_s: float = 0.5
     neutral_on_disconnect: bool = True
     default_mode: str = "normal"
 
@@ -41,6 +42,7 @@ class VideoConfig:
     codec: str = "h264"
     profile: str = "baseline"
     inline_headers: bool = True
+    no_preview: bool = True
     target_ip: str = "192.168.4.2"
     udp_port: int = 5000
     tcp_bind: str = "0.0.0.0"
@@ -84,4 +86,3 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
         control=ControlConfig(**_section(raw, "control")),
         video=VideoConfig(**_section(raw, "video")),
     )
-

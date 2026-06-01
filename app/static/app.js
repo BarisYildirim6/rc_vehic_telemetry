@@ -15,6 +15,7 @@ let keys = new Set();
 let currentThrottle = 0;
 let currentSteering = 0;
 let brakeLatch = false;
+let nextControlSend = performance.now();
 
 function clamp(value) {
   return Math.max(-1, Math.min(1, value));
@@ -118,7 +119,7 @@ function sendControl(throttle, steering, brake = false) {
 
   // Latency-sensitive path: keep this tiny and send the latest normalized state
   // at a fixed cadence. The server adds authoritative sequence and timestamp.
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (ws && ws.readyState === WebSocket.OPEN && ws.bufferedAmount < 4096) {
     ws.send(JSON.stringify(payload));
   }
 }
@@ -167,8 +168,18 @@ estopButton.addEventListener("click", triggerEstop);
 connectWebSocket();
 refreshStatus();
 window.setInterval(refreshStatus, 1000);
-window.setInterval(() => {
+
+function controlTick() {
   const control = mergedControl();
   sendControl(control.throttle, control.steering, brakeLatch || control.brake);
-}, Math.max(10, Math.round(1000 / sendRate)));
 
+  const intervalMs = 1000 / sendRate;
+  nextControlSend += intervalMs;
+  const now = performance.now();
+  if (nextControlSend < now - intervalMs) {
+    nextControlSend = now + intervalMs;
+  }
+  window.setTimeout(controlTick, Math.max(0, nextControlSend - now));
+}
+
+window.setTimeout(controlTick, 0);

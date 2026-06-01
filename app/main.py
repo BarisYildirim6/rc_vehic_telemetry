@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -81,11 +82,20 @@ async def api_estop() -> dict[str, object]:
 async def ws_control(websocket: WebSocket) -> None:
     await websocket.accept()
     control_manager.register_client()
-    await websocket.send_json({"type": "hello", "send_rate_hz": CONFIG.control.send_rate_hz})
 
     try:
+        await websocket.send_json({"type": "hello", "send_rate_hz": CONFIG.control.send_rate_hz})
         while True:
-            raw = await websocket.receive_text()
+            try:
+                raw = await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=CONFIG.control.client_timeout_s,
+                )
+            except asyncio.TimeoutError:
+                LOGGER.warning("control websocket missed heartbeat; forcing neutral stop")
+                await websocket.close(code=1001, reason="control heartbeat timeout")
+                break
+
             try:
                 data = json.loads(raw)
                 if not isinstance(data, dict):
@@ -93,6 +103,7 @@ async def ws_control(websocket: WebSocket) -> None:
                 packet = parse_client_packet(data)
             except Exception as exc:  # noqa: BLE001 - malformed client input should not kill server.
                 LOGGER.warning("ignoring malformed control packet: %s", exc)
+                control_manager.send_neutral(brake=True, mode="estop")
                 await websocket.send_json({"type": "error", "message": "invalid control packet"})
                 continue
 
@@ -117,4 +128,3 @@ async def ws_control(websocket: WebSocket) -> None:
 async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
     LOGGER.exception("unhandled request error: %s", exc)
     return JSONResponse(status_code=500, content={"detail": "internal server error"})
-

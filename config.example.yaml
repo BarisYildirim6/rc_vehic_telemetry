@@ -15,6 +15,7 @@ serial:
 
 control:
   send_rate_hz: 50
+  client_timeout_s: 0.5
   neutral_on_disconnect: true
   default_mode: "normal"
 
@@ -26,10 +27,10 @@ video:
   codec: "h264"
   profile: "baseline"
   inline_headers: true
+  no_preview: true
   # UDP target is the viewing machine. Change this to your laptop IP.
   target_ip: "192.168.4.2"
   udp_port: 5000
   tcp_bind: "0.0.0.0"
   tcp_port: 8888
   camera_app: "rpicam-vid"
-

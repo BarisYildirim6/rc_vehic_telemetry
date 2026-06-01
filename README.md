@@ -47,7 +47,9 @@ Use Raspberry Pi OS Bookworm or newer with Python 3.11+.
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip rpicam-apps
+sudo apt install -y git python3-venv python3-pip rpicam-apps
+sudo mkdir -p /opt/fpv-car
+sudo chown "$USER":"$USER" /opt/fpv-car
 git clone <your-repo-url> /opt/fpv-car
 cd /opt/fpv-car
 python3 -m venv .venv
@@ -55,6 +57,14 @@ python3 -m venv .venv
 pip install -r requirements.txt
 cp config.example.yaml config.yaml
 ```
+
+For USB serial devices, add the runtime user to `dialout`, then log out and back in:
+
+```bash
+sudo usermod -aG dialout "$USER"
+```
+
+For the Pi header UART at `/dev/serial0`, run `sudo raspi-config`, enable the serial port, and disable the login shell on serial.
 
 Edit `config.yaml`:
 
@@ -82,7 +92,7 @@ TARGET_IP=<laptop-ip> UDP_PORT=5000 bash scripts/start_video_udp.sh
 View on the laptop with ffplay:
 
 ```bash
-ffplay -fflags nobuffer -flags low_delay -framedrop udp://@:5000
+ffplay udp://@:5000 -fflags nobuffer -flags low_delay -framedrop
 ```
 
 TCP listener on the Pi:
@@ -94,10 +104,24 @@ TCP_PORT=8888 bash scripts/start_video_tcp.sh
 View from a laptop:
 
 ```bash
-ffplay -fflags nobuffer -flags low_delay tcp://<pi-ip>:8888
+ffplay tcp://<pi-ip>:8888 -vf "setpts=N/30" -fflags nobuffer -flags low_delay -framedrop
 ```
 
-The default camera profile is 1280x720, 30 fps, H.264 baseline, inline headers, 2.5 Mbps.
+The default camera profile is 1280x720, 30 fps, H.264 baseline, inline headers, 2.5 Mbps. Raw H.264 over UDP/TCP is low latency but not accepted by every player.
+
+For a more player-compatible UDP MPEG-TS stream:
+
+```bash
+TARGET_IP=<laptop-ip> UDP_PORT=5000 bash scripts/start_video_udp_mpegts.sh
+vlc udp://@:5000
+```
+
+Confirm the camera is detected:
+
+```bash
+rpicam-hello --list-cameras
+rpicam-vid -t 5000 -n --inline -o test.h264
+```
 
 Stop a manually started camera process:
 

@@ -21,6 +21,8 @@ def rpicam_base_args(config: VideoConfig) -> list[str]:
         "--profile",
         config.profile,
     ]
+    if config.no_preview:
+        args.append("-n")
     if config.inline_headers:
         args.append("--inline")
     return args
@@ -51,4 +53,3 @@ def video_status(config: VideoConfig) -> dict[str, object]:
         "udp_command": " ".join(udp_command(config)),
         "tcp_command": " ".join(tcp_command(config)),
     }
-

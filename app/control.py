@@ -40,15 +40,16 @@ class ControlManager:
     def handle_client_packet(self, packet: ClientControlPacket) -> dict[str, Any]:
         throttle = clamp_unit(packet.throttle)
         steering = clamp_unit(packet.steering)
-        brake = bool(packet.brake)
-        mode = "estop" if brake or packet.mode == "estop" else self.config.default_mode
+        safety_stop = bool(packet.brake) or packet.mode == "estop"
+        brake = safety_stop
+        mode = "estop" if safety_stop else self.config.default_mode
 
         with self._lock:
             self._seq += 1
             serial_packet = SerialControlPacket(
                 seq=self._seq,
-                throttle=0.0 if brake else throttle,
-                steering=0.0 if brake else steering,
+                throttle=0.0 if safety_stop else throttle,
+                steering=0.0 if safety_stop else steering,
                 brake=brake,
                 mode=mode,  # type: ignore[arg-type]
                 ts=int(time.time() * 1000),
@@ -57,11 +58,12 @@ class ControlManager:
             self._last_packet = payload
             self._last_client_ts = time.time()
 
-        self.serial_link.send(payload)
+        self.serial_link.send(payload, priority=brake or mode == "estop")
         return payload
 
     def send_neutral(self, brake: bool = False, mode: str = "normal") -> dict[str, Any]:
-        packet = ClientControlPacket(throttle=0.0, steering=0.0, brake=brake, mode="estop" if brake else "normal")
+        control_mode = "estop" if brake or mode == "estop" else "normal"
+        packet = ClientControlPacket(throttle=0.0, steering=0.0, brake=brake, mode=control_mode)
         return self.handle_client_packet(packet)
 
     def status(self) -> dict[str, Any]:
@@ -73,4 +75,3 @@ class ControlManager:
                 "last_client_ts": self._last_client_ts,
                 "send_rate_hz": self.config.send_rate_hz,
             }
-

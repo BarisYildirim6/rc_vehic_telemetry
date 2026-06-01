@@ -10,6 +10,7 @@ FPS="${FPS:-30}"
 BITRATE="${BITRATE:-2500000}"
 
 exec "$CAMERA_APP" -t 0 \
+  -n \
   --codec h264 \
   --width "$WIDTH" \
   --height "$HEIGHT" \
@@ -18,4 +19,3 @@ exec "$CAMERA_APP" -t 0 \
   --profile baseline \
   --inline \
   -o "udp://${TARGET_IP}:${UDP_PORT}"
-

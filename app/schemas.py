@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -9,6 +10,8 @@ Mode = Literal["normal", "estop"]
 
 
 def clamp_unit(value: float) -> float:
+    if not math.isfinite(value):
+        raise ValueError("control value must be finite")
     return max(-1.0, min(1.0, float(value)))
 
 
@@ -38,4 +41,3 @@ def parse_client_packet(data: dict[str, Any]) -> ClientControlPacket:
         return ClientControlPacket.model_validate(data)
     except (TypeError, ValueError, ValidationError) as exc:
         raise ValueError(f"invalid control packet: {exc}") from exc
-
