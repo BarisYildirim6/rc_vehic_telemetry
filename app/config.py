@@ -43,11 +43,18 @@ class VideoConfig:
     profile: str = "baseline"
     inline_headers: bool = True
     no_preview: bool = True
+    low_latency: bool = True
     target_ip: str = "192.168.4.2"
     udp_port: int = 5000
     tcp_bind: str = "0.0.0.0"
     tcp_port: int = 8888
     camera_app: str = "rpicam-vid"
+    mediamtx_host: str = ""
+    mediamtx_webrtc_port: int = 8889
+    mediamtx_rtsp_port: int = 8554
+    mediamtx_path: str = "fpv"
+    mediamtx_ingest_host: str = "127.0.0.1"
+    mediamtx_ingest_port: int = 5600
 
 
 @dataclass(frozen=True)

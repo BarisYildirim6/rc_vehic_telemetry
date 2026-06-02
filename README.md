@@ -2,7 +2,7 @@
 
 FastAPI control backend for a Raspberry Pi hosted FPV RC car. Video streaming and controls are intentionally separate:
 
-- H.264 video: Raspberry Pi camera through `rpicam-vid`.
+- H.264 video: Raspberry Pi camera through `rpicam-vid`, relayed by MediaMTX for browser WebRTC.
 - Controls: browser WebSocket to the Pi, then newline-delimited JSON to ESP32 over serial.
 - Mock mode: runs on a laptop with no camera and no ESP32.
 
@@ -11,6 +11,7 @@ FastAPI control backend for a Raspberry Pi hosted FPV RC car. Video streaming an
 ```text
 app/          FastAPI backend, control path, serial link, UI
 scripts/      camera streaming helpers and WebSocket test client
+mediamtx/     MediaMTX relay configuration
 systemd/      Raspberry Pi service unit examples
 esp32/        serial protocol and Arduino receiver stub
 ```
@@ -33,7 +34,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. With no serial device present, `/api/status` should show `serial.mode` as `mock`.
+Open `http://127.0.0.1:8000`. With no serial device present, `/api/status` should show `serial.mode` as `mock`. The video panel will show disconnected unless MediaMTX and a stream source are running.
 
 Optional control-path test:
 
@@ -47,7 +48,7 @@ Use Raspberry Pi OS Bookworm or newer with Python 3.11+.
 
 ```bash
 sudo apt update
-sudo apt install -y git python3-venv python3-pip rpicam-apps
+sudo apt install -y git python3-venv python3-pip rpicam-apps ffmpeg
 sudo mkdir -p /opt/fpv-car
 sudo chown "$USER":"$USER" /opt/fpv-car
 git clone <your-repo-url> /opt/fpv-car
@@ -69,19 +70,92 @@ For the Pi header UART at `/dev/serial0`, run `sudo raspi-config`, enable the se
 Edit `config.yaml`:
 
 - Set `serial.port` to `/dev/ttyUSB0`, `/dev/ttyACM0`, or `/dev/serial0`.
-- Set `video.target_ip` to the viewing laptop IP for UDP streaming.
+- Keep `video.mediamtx_host` empty unless MediaMTX runs on a different host.
+- Keep `video.mediamtx_path` aligned with `mediamtx/mediamtx.yml`; default is `fpv`.
+- Adjust `video.width`, `video.height`, `video.fps`, and `video.bitrate` for latency/bandwidth.
+- Keep `video.low_latency: true` for Bookworm rpicam builds; set `LOW_LATENCY=0` for the publisher script only if your installed `rpicam-vid` rejects `--low-latency`.
 - Keep `serial.mock_when_missing: true` while testing without ESP32.
 
-Run the backend:
+## MediaMTX Setup
+
+MediaMTX is the video relay. It receives a local UDP MPEG-TS stream from `rpicam-vid` and exposes it to the cockpit browser with WebRTC.
+
+Install MediaMTX on the Pi:
+
+1. Download the latest MediaMTX release from `https://github.com/bluenviron/mediamtx/releases`.
+2. Use `linux_arm64.tar.gz` for Raspberry Pi OS 64-bit, or `linux_armv7.tar.gz` for 32-bit.
+3. Extract it and put the `mediamtx` binary in `/usr/local/bin` or `/opt/fpv-car/mediamtx/`.
+
+Example after downloading the archive:
+
+```bash
+tar -xzf mediamtx_*_linux_arm64.tar.gz
+sudo install -m 0755 mediamtx /usr/local/bin/mediamtx
+```
+
+The project config is `mediamtx/mediamtx.yml`. Defaults:
+
+- WebRTC browser endpoint: `http://<pi-ip>:8889/fpv`
+- WHEP endpoint used by the cockpit: `http://<pi-ip>:8889/fpv/whep`
+- RTSP fallback: `rtsp://<pi-ip>:8554/fpv`
+- Camera ingest: `udp+mpegts://127.0.0.1:5600`
+
+## Running The Cockpit
+
+Terminal 1, start the FastAPI control backend:
 
 ```bash
 . .venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open `http://<pi-ip>:8000` from the controller browser.
+Terminal 2, start MediaMTX:
+
+```bash
+bash scripts/start_mediamtx.sh
+```
+
+Terminal 3, start the Pi camera publisher into MediaMTX:
+
+```bash
+bash scripts/start_video_mediamtx.sh
+```
+
+Open the unified cockpit from the controller browser:
+
+```text
+http://<pi-ip>:8000
+```
+
+The browser control WebSocket still connects to FastAPI on port 8000. The video panel connects separately to MediaMTX on port 8889.
 
 ## Camera Streaming
+
+The v2 cockpit path is:
+
+```text
+Raspberry Pi Camera -> rpicam-vid H.264 -> UDP MPEG-TS localhost:5600 -> MediaMTX -> WebRTC -> browser <video>
+```
+
+Manual MediaMTX publisher command:
+
+```bash
+WIDTH=1280 HEIGHT=720 FPS=30 BITRATE=2500000 bash scripts/start_video_mediamtx.sh
+```
+
+MediaMTX standalone browser page:
+
+```text
+http://<pi-ip>:8889/fpv
+```
+
+External RTSP fallback:
+
+```bash
+ffplay rtsp://<pi-ip>:8554/fpv -fflags nobuffer -flags low_delay -framedrop
+```
+
+The older direct UDP/TCP helpers remain available for debugging outside the cockpit.
 
 UDP H.264 stream from Pi to a laptop:
 
@@ -127,6 +201,21 @@ Stop a manually started camera process:
 
 ```bash
 bash scripts/stop_video.sh
+bash scripts/stop_mediamtx_video.sh
+```
+
+## Latency Troubleshooting
+
+- Prefer 1280x720 at 30 fps and tune `BITRATE` down before lowering frame rate.
+- Keep the Pi and browser client on the same Wi-Fi band or wired network when possible.
+- Confirm the camera stream reaches MediaMTX first: open `http://<pi-ip>:8889/fpv`.
+- If WebRTC does not connect in the cockpit, try the RTSP fallback with `ffplay`.
+- Check that ports `8889/tcp` and `8189/udp` are reachable from the browser device.
+- On Raspberry Pi OS Bookworm, UDP receive buffering may need tuning for local MPEG-TS ingest. Add these to `/etc/sysctl.conf`, then run `sudo sysctl -p`:
+
+```text
+net.core.rmem_default=1000000
+net.core.rmem_max=1000000
 ```
 
 ## API
@@ -166,9 +255,11 @@ Copy the service files after installing the project at `/opt/fpv-car`:
 
 ```bash
 sudo cp systemd/fpv-control.service /etc/systemd/system/
+sudo cp systemd/mediamtx.service /etc/systemd/system/
 sudo cp systemd/fpv-video.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now fpv-control.service
+sudo systemctl enable --now mediamtx.service
 sudo systemctl enable --now fpv-video.service
 ```
 
@@ -177,8 +268,11 @@ For video service configuration, create `/opt/fpv-car/video.env`:
 ```bash
 TARGET_IP=<laptop-ip>
 UDP_PORT=5000
+MEDIAMTX_INGEST_HOST=127.0.0.1
+MEDIAMTX_INGEST_PORT=5600
 WIDTH=1280
 HEIGHT=720
 FPS=30
 BITRATE=2500000
+LOW_LATENCY=1
 ```

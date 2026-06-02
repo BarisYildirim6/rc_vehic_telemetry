@@ -35,7 +35,44 @@
         </article>
       </section>
 
-      <section class="controls">
+      <section class="cockpit-grid">
+        <section class="panel video-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Video</h2>
+              <p class="muted">MediaMTX WebRTC stream</p>
+            </div>
+            <button id="videoReconnectButton" class="secondary" type="button">Reconnect</button>
+          </div>
+          <div class="video-frame">
+            <video id="fpvVideo" autoplay playsinline muted></video>
+            <div id="videoOverlay" class="video-overlay">Video disconnected</div>
+          </div>
+          <div class="video-status-grid">
+            <div>
+              <span class="label">Video</span>
+              <strong id="videoStatus">Disconnected</strong>
+            </div>
+            <div>
+              <span class="label">Latency</span>
+              <strong id="latencyStatus">Test pending</strong>
+            </div>
+          </div>
+          <div class="stream-url-row">
+            <span class="label">Stream URL</span>
+            <code id="streamUrl">Loading</code>
+          </div>
+          <details class="fallback-help">
+            <summary>External player fallback</summary>
+            <p class="muted">
+              If WebRTC does not connect, confirm MediaMTX and the camera publisher are running, then open
+              the RTSP stream externally.
+            </p>
+            <pre id="videoCommand"></pre>
+          </details>
+        </section>
+
+        <section class="controls">
         <div class="panel control-panel">
           <h2>Keyboard</h2>
           <div class="keys">
@@ -59,18 +96,9 @@
           </div>
         </div>
       </section>
-
-      <section class="panel video-panel">
-        <h2>Video</h2>
-        <p class="muted">
-          H.264 camera streaming runs separately from this control page. Use the scripts in
-          <code>scripts/</code> and view the stream in VLC, ffplay, or GStreamer.
-        </p>
-        <pre id="videoCommand"></pre>
       </section>
     </main>
 
     <script src="/static/app.js"></script>
   </body>
 </html>
-

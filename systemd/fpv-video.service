@@ -1,14 +1,15 @@
 [Unit]
-Description=FPV RC Car H.264 camera streamer
-After=network-online.target
-Wants=network-online.target
+Description=FPV RC Car camera publisher to MediaMTX
+After=network-online.target mediamtx.service
+Wants=network-online.target mediamtx.service
 
 [Service]
 Type=simple
 User=pi
 WorkingDirectory=/opt/fpv-car
 EnvironmentFile=-/opt/fpv-car/video.env
-ExecStart=/bin/bash /opt/fpv-car/scripts/start_video_udp.sh
+Environment=FPV_SYSTEMD=1
+ExecStart=/bin/bash /opt/fpv-car/scripts/start_video_mediamtx.sh
 Restart=always
 RestartSec=2
 

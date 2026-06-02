@@ -1,0 +1,17 @@
+[Unit]
+Description=MediaMTX video relay for FPV cockpit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/fpv-car
+Environment=MEDIAMTX_CONFIG=/opt/fpv-car/mediamtx/mediamtx.yml
+Environment=FPV_SYSTEMD=1
+ExecStart=/bin/bash /opt/fpv-car/scripts/start_mediamtx.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

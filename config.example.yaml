@@ -28,9 +28,16 @@ video:
   profile: "baseline"
   inline_headers: true
   no_preview: true
+  low_latency: true
   # UDP target is the viewing machine. Change this to your laptop IP.
   target_ip: "192.168.4.2"
   udp_port: 5000
   tcp_bind: "0.0.0.0"
   tcp_port: 8888
   camera_app: "rpicam-vid"
+  mediamtx_host: ""
+  mediamtx_webrtc_port: 8889
+  mediamtx_rtsp_port: 8554
+  mediamtx_path: "fpv"
+  mediamtx_ingest_host: "127.0.0.1"
+  mediamtx_ingest_port: 5600

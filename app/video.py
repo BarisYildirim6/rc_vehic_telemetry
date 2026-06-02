@@ -41,7 +41,35 @@ def tcp_command(config: VideoConfig) -> list[str]:
     ]
 
 
+def mediamtx_ingest_command(config: VideoConfig) -> list[str]:
+    args = [
+        config.camera_app,
+        "-t",
+        "0",
+        "-n",
+        "--codec",
+        "libav",
+        "--libav-format",
+        "mpegts",
+        "--width",
+        str(config.width),
+        "--height",
+        str(config.height),
+        "--framerate",
+        str(config.fps),
+        "--bitrate",
+        str(config.bitrate),
+        "-o",
+        f"udp://{config.mediamtx_ingest_host}:{config.mediamtx_ingest_port}?pkt_size=1316",
+    ]
+    if config.low_latency:
+        args.insert(6, "--low-latency")
+    return args
+
+
 def video_status(config: VideoConfig) -> dict[str, object]:
+    stream_path = config.mediamtx_path.strip("/")
+    web_host = config.mediamtx_host.strip()
     return {
         "profile": {
             "width": config.width,
@@ -52,4 +80,16 @@ def video_status(config: VideoConfig) -> dict[str, object]:
         },
         "udp_command": " ".join(udp_command(config)),
         "tcp_command": " ".join(tcp_command(config)),
+        "mediamtx": {
+            "host": web_host,
+            "webrtc_port": config.mediamtx_webrtc_port,
+            "rtsp_port": config.mediamtx_rtsp_port,
+            "path": stream_path,
+            "ingest_host": config.mediamtx_ingest_host,
+            "ingest_port": config.mediamtx_ingest_port,
+            "webrtc_page_path": f"/{stream_path}",
+            "whep_path": f"/{stream_path}/whep",
+            "rtsp_path": f"/{stream_path}",
+        },
+        "mediamtx_ingest_command": " ".join(mediamtx_ingest_command(config)),
     }

@@ -1,0 +1,50 @@
+logLevel: info
+logDestinations: [stdout]
+readTimeout: 10s
+writeTimeout: 10s
+writeQueueSize: 512
+udpMaxPayloadSize: 1452
+# Raspberry Pi camera ingest is local UDP MPEG-TS. A larger socket buffer helps
+# avoid packet loss when the Pi is under load.
+udpReadBufferSize: 1000000
+
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+      - action: read
+      - action: playback
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: api
+      - action: metrics
+      - action: pprof
+
+rtsp: true
+rtspTransports: [tcp]
+rtspAddress: :8554
+
+# Keep unused protocols off for the cockpit MVP. RTSP remains enabled as an
+# external-player fallback; WebRTC is the browser path.
+hls: false
+rtmp: false
+srt: false
+
+webrtc: true
+webrtcAddress: :8889
+webrtcAllowOrigins: ["*"]
+# Browser media should use UDP for lower latency. TCP ICE is intentionally off
+# because it can accumulate delay under congestion.
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: ""
+
+paths:
+  fpv:
+    # rpicam-vid publishes H.264 in MPEG-TS to this local UDP socket.
+    source: udp+mpegts://127.0.0.1:5600
+    sourceOnDemand: no
