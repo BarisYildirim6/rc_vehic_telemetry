@@ -6,7 +6,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
-Mode = Literal["normal", "estop"]
+SerialMode = Literal["normal", "estop"]
+DriveMode = Literal["bench", "crawl", "normal", "sport"]
 
 
 def clamp_unit(value: float) -> float:
@@ -16,10 +17,15 @@ def clamp_unit(value: float) -> float:
 
 
 class ClientControlPacket(BaseModel):
+    type: str = Field(default="control")
+    seq: int | None = Field(default=None)
     throttle: float = Field(default=0.0)
     steering: float = Field(default=0.0)
     brake: bool = Field(default=False)
-    mode: Mode = Field(default="normal")
+    armed: bool | None = Field(default=None)
+    estop: bool | None = Field(default=None)
+    mode: DriveMode | SerialMode | None = Field(default=None)
+    client_ts: int | None = Field(default=None)
 
     @field_validator("throttle", "steering", mode="before")
     @classmethod
@@ -32,7 +38,10 @@ class SerialControlPacket(BaseModel):
     throttle: float
     steering: float
     brake: bool
-    mode: Mode
+    mode: SerialMode
+    armed: bool = False
+    estop: bool = False
+    drive_mode: DriveMode = "bench"
     ts: int
 
 

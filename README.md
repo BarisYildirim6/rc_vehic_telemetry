@@ -42,6 +42,8 @@ Optional control-path test:
 python scripts/test_control_client.py --seconds 10
 ```
 
+Mock mode includes simulated ESP32 telemetry in the cockpit HUD and `/api/status`: armed state, failsafe state, last control age, throttle/steering PWM estimates, and optional fake battery voltage from `telemetry.mock_battery_voltage`.
+
 ## Raspberry Pi Setup
 
 Use Raspberry Pi OS Bookworm or newer with Python 3.11+.
@@ -128,6 +130,43 @@ http://<pi-ip>:8000
 ```
 
 The browser control WebSocket still connects to FastAPI on port 8000. The video panel connects separately to MediaMTX on port 8889.
+
+## Cockpit Controls
+
+Keyboard:
+
+- `W` / `S`: throttle forward/reverse
+- `A` / `D`: steering left/right
+- `Space`: E-stop
+- `R`: clear E-stop only when throttle is neutral
+- `1`: Bench mode
+- `2`: Crawl mode
+- `3`: Normal mode
+- `4`: Sport mode
+- `Enter`: arm/disarm toggle only when throttle is neutral
+
+Gamepad support uses configurable constants in `app/static/app.js` for axis mapping, deadzone, expo, and throttle inversion. Gamepad and keyboard inputs both use the same shaping and `sendControl()` path.
+
+The cockpit HUD overlays the video and shows throttle, steering, drive mode, arm state, E-stop state, WebSocket state, video state, RTT last/avg/min/max, jitter, measured control send rate, last command age, and serial/mock state.
+
+## Safety States And Drive Modes
+
+Default state is disarmed, E-stop clear, and `Bench` mode.
+
+- Disarmed: backend forwards fully neutral throttle and steering regardless of browser input.
+- Armed: backend may forward shaped commands, subject to E-stop and drive mode limits.
+- E-stop active: backend forwards neutral throttle, centered steering, and `brake=true`; arming is blocked.
+- Clear E-stop: allowed only when throttle is neutral.
+- WebSocket disconnect: backend sends a neutral brake packet.
+
+Drive modes:
+
+- `Bench`: max throttle `0.00`, max steering `0.60`; useful for servo-only testing.
+- `Crawl`: max throttle `0.25`, max steering `0.60`, slow ramp.
+- `Normal`: max throttle `0.60`, max steering `0.85`, medium ramp.
+- `Sport`: max throttle `1.00`, max steering `1.00`, faster ramp.
+
+The browser applies deadzone, expo, rate limiting, drive-mode limits, and optional steering reduction at high throttle. The backend also clamps values and enforces the core safety rules, so UI bugs cannot bypass disarm, E-stop, or Bench throttle lockout.
 
 ## Camera Streaming
 
@@ -223,21 +262,51 @@ net.core.rmem_max=1000000
 - `GET /health`: process health.
 - `GET /api/status`: control, serial, and video command status.
 - `POST /api/estop`: sends `{throttle:0, steering:0, brake:true, mode:"estop"}` immediately.
+- `POST /api/clear-estop`: clears global E-stop only when throttle is neutral.
+- `POST /api/mode`: body `{"mode":"bench|crawl|normal|sport"}`.
+- `POST /api/arm`: body `{"armed":true|false}`.
 - `WS /ws/control`: browser control stream.
 
-Client WebSocket packets:
+Legacy client WebSocket packets still parse:
 
 ```json
 {"throttle":0.25,"steering":-0.1,"brake":false,"mode":"normal"}
 ```
 
+Cockpit control packets include metrics and safety state:
+
+```json
+{"type":"control","seq":42,"throttle":0.25,"steering":-0.1,"brake":false,"armed":true,"estop":false,"mode":"crawl","client_ts":1710000000000}
+```
+
+Ping/pong:
+
+```json
+{"type":"ping","seq":123,"client_ts":1710000000000}
+{"type":"pong","seq":123,"client_ts":1710000000000,"server_ts":1710000000010}
+```
+
+The server also sends `{"type":"status", ...}` over the WebSocket at 5 Hz.
+
 Server-to-ESP32 serial packets:
 
 ```json
-{"seq":1234,"throttle":0.25,"steering":-0.1,"brake":false,"mode":"normal","ts":123456789}
+{"seq":1234,"throttle":0.25,"steering":-0.1,"brake":false,"mode":"normal","armed":true,"estop":false,"drive_mode":"crawl","ts":123456789}
 ```
 
 All throttle and steering values are clamped to `[-1.0, 1.0]` on the backend. The backend sends neutral brake on WebSocket disconnect.
+
+## Mock Mode Test Checklist
+
+1. Start the backend without ESP32 attached and open `http://127.0.0.1:8000`.
+2. Confirm HUD/`/api/status` show `mock` serial mode.
+3. In `Bench`, press `W`; throttle should remain `0%` and serial `last_packet.throttle` should remain `0.0`.
+4. Press `Enter` while throttle is neutral; arm should only succeed if E-stop is clear.
+5. Switch to `Crawl` with `2`; throttle should ramp slowly and cap around `25%`.
+6. Press `Space`; E-stop should become active, arm should drop, and packet `brake` should be `true`.
+7. Release throttle and press `R`; E-stop should clear.
+8. Watch HUD RTT/jitter/send-rate/last-age while holding `A/D/W/S`.
+9. Stop or disconnect the browser tab; backend should send a neutral brake packet.
 
 ## ESP32 Later
 

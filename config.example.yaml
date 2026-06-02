@@ -15,9 +15,12 @@ serial:
 
 control:
   send_rate_hz: 50
-  client_timeout_s: 0.5
+  client_timeout_s: 1.5
   neutral_on_disconnect: true
-  default_mode: "normal"
+  default_mode: "bench"
+
+telemetry:
+  mock_battery_voltage:
 
 video:
   width: 1280

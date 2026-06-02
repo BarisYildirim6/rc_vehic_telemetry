@@ -30,7 +30,12 @@ class ControlConfig:
     send_rate_hz: int = 50
     client_timeout_s: float = 0.5
     neutral_on_disconnect: bool = True
-    default_mode: str = "normal"
+    default_mode: str = "bench"
+
+
+@dataclass(frozen=True)
+class TelemetryConfig:
+    mock_battery_voltage: float | None = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +67,7 @@ class AppConfig:
     server: ServerConfig = field(default_factory=ServerConfig)
     serial: SerialConfig = field(default_factory=SerialConfig)
     control: ControlConfig = field(default_factory=ControlConfig)
+    telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     video: VideoConfig = field(default_factory=VideoConfig)
 
 
@@ -91,5 +97,6 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
         server=ServerConfig(**_section(raw, "server")),
         serial=SerialConfig(**_section(raw, "serial")),
         control=ControlConfig(**_section(raw, "control")),
+        telemetry=TelemetryConfig(**_section(raw, "telemetry")),
         video=VideoConfig(**_section(raw, "video")),
     )

@@ -46,6 +46,36 @@
           </div>
           <div class="video-frame">
             <video id="fpvVideo" autoplay playsinline muted></video>
+            <div class="hud-overlay" aria-live="polite">
+              <div class="hud-row">
+                <span>THR</span><strong id="hudThrottle">0%</strong>
+                <span>STR</span><strong id="hudSteering">0%</strong>
+              </div>
+              <div class="hud-row">
+                <span>MODE</span><strong id="hudMode">Bench</strong>
+                <span>ARM</span><strong id="hudArmed">DISARMED</strong>
+              </div>
+              <div class="hud-row">
+                <span>E-STOP</span><strong id="hudEstop">CLEAR</strong>
+                <span>FAIL</span><strong id="hudFailsafe">--</strong>
+              </div>
+              <div class="hud-row">
+                <span>WS</span><strong id="hudWs">Disconnected</strong>
+                <span>VID</span><strong id="hudVideo">Disconnected</strong>
+              </div>
+              <div class="hud-row">
+                <span>IO</span><strong id="hudSerial">unknown</strong>
+                <span>SRC</span><strong id="hudTelemetry">--</strong>
+              </div>
+              <div class="hud-row hud-wide">
+                <span>RTT</span><strong id="hudRtt">--</strong>
+                <span>JIT</span><strong id="hudJitter">--</strong>
+              </div>
+              <div class="hud-row hud-wide">
+                <span>RATE</span><strong id="hudRate">0 Hz</strong>
+                <span>AGE</span><strong id="hudAge">--</strong>
+              </div>
+            </div>
             <div id="videoOverlay" class="video-overlay">Video disconnected</div>
           </div>
           <div class="video-status-grid">
@@ -61,6 +91,10 @@
           <div class="stream-url-row">
             <span class="label">Stream URL</span>
             <code id="streamUrl">Loading</code>
+          </div>
+          <div class="actions-row">
+            <button id="armButton" class="secondary" type="button">Arm</button>
+            <button id="clearEstopButton" class="secondary" type="button">Clear E-Stop</button>
           </div>
           <details class="fallback-help">
             <summary>External player fallback</summary>
@@ -81,11 +115,20 @@
             <kbd>A</kbd><span>Left</span>
             <kbd>D</kbd><span>Right</span>
             <kbd>Space</kbd><span>Emergency stop</span>
+            <kbd>R</kbd><span>Clear E-stop</span>
+            <kbd>1-4</kbd><span>Drive mode</span>
+            <kbd>Enter</kbd><span>Arm toggle</span>
           </div>
         </div>
         <div class="panel control-panel">
-          <h2>Gamepad</h2>
+          <h2>Drive</h2>
           <p id="gamepadStatus" class="muted">No controller detected</p>
+          <div class="mode-buttons" role="group" aria-label="Drive mode">
+            <button class="mode-button" data-mode="bench" type="button">Bench</button>
+            <button class="mode-button" data-mode="crawl" type="button">Crawl</button>
+            <button class="mode-button" data-mode="normal" type="button">Normal</button>
+            <button class="mode-button" data-mode="sport" type="button">Sport</button>
+          </div>
           <div class="bar-row">
             <span>Throttle</span>
             <div class="bar"><i id="throttleBar"></i></div>
